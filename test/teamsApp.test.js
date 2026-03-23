@@ -43,6 +43,11 @@ test("createTeamsAlertApp builds an express app when collaborators are injected"
           });
         },
       },
+      callService: {
+        async placeAlertCall() {
+          return { sid: "CA123" };
+        },
+      },
       alertService: {
         async handleMessage() {
           return { triggered: false, reason: "sender_not_watched" };
