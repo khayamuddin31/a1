@@ -1,0 +1,37 @@
+{
+  "name": "team-message-call-alerts",
+  "version": "1.0.0",
+  "description": "Slack message watcher that places phone call alerts for selected senders",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/khayamuddin31/a1.git"
+  },
+  "keywords": [
+    "slack",
+    "twilio",
+    "alerts",
+    "voice"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/khayamuddin31/a1/issues"
+  },
+  "homepage": "https://github.com/khayamuddin31/a1#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@slack/bolt": "^4.6.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "twilio": "^5.13.0"
+  }
+}
