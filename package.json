@@ -1,0 +1,38 @@
+{
+  "name": "team-message-call-alerts",
+  "version": "1.0.0",
+  "description": "Local Microsoft Teams web watcher that places phone call alerts for selected senders",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "install:browsers": "playwright install chromium",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/khayamuddin31/a1.git"
+  },
+  "keywords": [
+    "microsoft-teams",
+    "playwright",
+    "twilio",
+    "alerts",
+    "voice"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/khayamuddin31/a1/issues"
+  },
+  "homepage": "https://github.com/khayamuddin31/a1#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "playwright": "^1.58.2",
+    "twilio": "^5.13.0"
+  }
+}
