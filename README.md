@@ -1,30 +1,48 @@
 # Team Message Call Alerts
 
-Node.js service that listens for Microsoft Teams messages and places an automated phone call whenever a watched person sends a new message.
+Node.js tool that watches the Microsoft Teams web app in a local browser session and places an automated phone call whenever a watched person sends a visible new message.
+
+This version is designed for environments where you **cannot use**:
+
+- Azure / Entra app registration
+- Microsoft Graph subscriptions
+- Teams bot registration
+- admin consent
+
+Instead of using Microsoft APIs, it watches the **Teams web UI** with Playwright.
 
 ## What it does
 
-- Receives Microsoft Teams bot message activities at `/api/messages`.
-- Filters messages so only selected Teams users trigger alerts.
-- Calls a destination phone number using Twilio Voice.
-- Applies a cooldown per watched sender to avoid repeated calls for rapid-fire messages.
-- Exposes:
-  - `GET /health` for uptime checks
-  - `POST /simulate-message` for safe local testing without a live Teams tenant
+- launches a persistent browser profile with the Teams web app
+- lets you sign in with your normal Teams account
+- scans visible Teams message elements for new messages
+- matches sender display names against a configured watch list
+- places a Twilio voice call to a destination phone number
+- applies a cooldown per watched sender to avoid repeated calls
 
-## Architecture
+## How it works
 
-1. Microsoft Teams sends a bot message activity to this app.
-2. The app extracts the sender identity from the activity (`from.aadObjectId` first, then `from.id` as fallback).
-3. The app checks whether the sender is in `WATCHED_TEAMS_USER_IDS`.
-4. If the sender is watched and not in cooldown, the app places a Twilio call to `ALERT_TO_NUMBER`.
-5. The spoken call message includes the sender and a short preview of the message body.
+1. The app opens `teams.microsoft.com` in a persistent browser profile.
+2. You sign in manually if needed.
+3. The watcher repeatedly scans the visible Teams UI for message-like elements.
+4. Newly detected messages are normalized and matched against `WATCHED_SENDERS`.
+5. If a watched sender appears, the app places a Twilio phone call.
+
+## Important limitations
+
+This approach avoids Microsoft admin setup, but it is inherently less reliable than official APIs.
+
+- It must run on a machine where a user can log in to Teams.
+- It depends on the Teams web DOM, which Microsoft can change at any time.
+- It works best when the Teams browser window is left on the recent chats / active conversation view.
+- It may miss messages if the relevant UI is not visible.
+- It may require selector tuning if Teams changes its markup.
 
 ## Requirements
 
 - Node.js 20+
-- A Microsoft Teams bot registration in Azure / Microsoft Bot Framework
 - A Twilio account with a voice-capable phone number
+- Access to Teams through the web app in a browser profile you can keep signed in
 
 ## Setup
 
@@ -33,57 +51,50 @@ npm install
 cp .env.example .env
 ```
 
+If you want Playwright's bundled browser, install it once:
+
+```bash
+npm run install:browsers
+```
+
+If you prefer to use locally installed Microsoft Edge, keep `BROWSER_CHANNEL=msedge` in `.env`.
+
 Fill in `.env`:
 
 ```env
-PORT=3000
-MicrosoftAppId=your-microsoft-app-id
-MicrosoftAppPassword=your-microsoft-app-password
-MicrosoftAppType=MultiTenant
-MicrosoftAppTenantId=
-WATCHED_TEAMS_USER_IDS=8:orgid:11111111-2222-3333-4444-555555555555,8:orgid:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+TEAMS_WEB_URL=https://teams.microsoft.com/v2/
+BROWSER_PROFILE_DIR=.teams-browser-profile
+BROWSER_CHANNEL=msedge
+HEADLESS=false
+POLL_INTERVAL_SECONDS=5
+WATCHED_SENDERS=Alice Smith,Bob Jones
 TWILIO_ACCOUNT_SID=ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 TWILIO_AUTH_TOKEN=your-twilio-auth-token
 TWILIO_FROM_NUMBER=+15551234567
 ALERT_TO_NUMBER=+15557654321
 CALL_COOLDOWN_SECONDS=300
-SIMULATION_SHARED_SECRET=optional-shared-secret
 ```
 
-### Important environment variables
+## Important environment variables
 
-- `WATCHED_TEAMS_USER_IDS`: comma-separated Teams user identifiers to watch
-- `MicrosoftAppId` / `MicrosoftAppPassword`: Teams bot credentials
-- `MicrosoftAppType`: typically `MultiTenant` unless your bot registration requires another setting
-- `MicrosoftAppTenantId`: optional tenant ID, commonly used for single-tenant bots
+- `WATCHED_SENDERS`: comma-separated display names to watch, matched case-insensitively
+- `BROWSER_PROFILE_DIR`: persistent browser profile directory so your Teams login can survive restarts
+- `BROWSER_CHANNEL`: optional Playwright browser channel, for example `msedge` or `chrome`
+- `HEADLESS`: `false` is recommended so you can sign in and verify the UI being watched
+- `POLL_INTERVAL_SECONDS`: how often the Teams page is scanned
 - `ALERT_TO_NUMBER`: destination number that receives the phone call
-- `CALL_COOLDOWN_SECONDS`: per-user delay before the same sender can trigger another call
-- `SIMULATION_SHARED_SECRET`: optional header value required by `/simulate-message`
+- `CALL_COOLDOWN_SECONDS`: per-sender delay before another call is allowed
 
-## Microsoft Teams bot configuration
+## Advanced selector overrides
 
-Create or configure a Teams bot registration and point its messaging endpoint to:
+If Microsoft changes the Teams DOM, you can override the default CSS selectors with comma-separated values:
 
-```text
-https://your-domain.example/api/messages
-```
+- `TEAMS_MESSAGE_CONTAINER_SELECTORS`
+- `TEAMS_SENDER_SELECTORS`
+- `TEAMS_TEXT_SELECTORS`
+- `TEAMS_TIMESTAMP_SELECTORS`
 
-### Bot behavior
-
-For this service to receive messages:
-
-- the bot must be installed in the chat, group chat, or team
-- users must send messages in a scope where the bot is present
-- the hosting endpoint must be publicly reachable by Microsoft Teams
-
-### Choosing watched user IDs
-
-The service matches users using the Teams activity sender:
-
-1. `from.aadObjectId`
-2. `from.id` if `aadObjectId` is not present
-
-In most environments, using Azure AD object IDs is the most stable option. You can inspect incoming payloads during setup or temporarily log sender data to confirm the identifiers for the people you want to watch.
+These are optional and only needed if the built-in heuristics stop matching your Teams UI.
 
 ## Run locally
 
@@ -91,24 +102,13 @@ In most environments, using Azure AD object IDs is the most stable option. You c
 npm start
 ```
 
-You should see the service start on the configured port.
+When the browser opens:
 
-## Local simulation
+1. sign in to Microsoft Teams if prompted
+2. keep Teams on the recent chats list or the conversation view you want to monitor
+3. leave the watcher running
 
-You can trigger the alert logic without Teams by calling the simulation endpoint:
-
-```bash
-curl -X POST http://localhost:3000/simulate-message \
-  -H "Content-Type: application/json" \
-  -H "x-simulation-secret: optional-shared-secret" \
-  -d '{
-    "senderId": "8:orgid:11111111-2222-3333-4444-555555555555",
-    "senderName": "Alice",
-    "text": "Production database latency is increasing."
-  }'
-```
-
-If `senderId` is listed in `WATCHED_TEAMS_USER_IDS`, the service places a Twilio phone call.
+The first visible set of messages is treated as a baseline, so the watcher only alerts on messages detected after startup or after the Teams route changes.
 
 ## Test
 
@@ -119,5 +119,5 @@ npm test
 ## Notes
 
 - The spoken alert uses Twilio's built-in TwiML response and the default `alice` voice.
-- Message edits, deletions, bot messages, and empty messages are ignored.
-- This project targets Microsoft Teams message activities delivered through a bot endpoint.
+- Sender matching is based on visible display names from the Teams web UI, not stable Azure IDs.
+- This is a local automation workaround, not an official Microsoft Teams integration.

@@ -31,6 +31,26 @@ function getInteger(env, key, fallback) {
   return parsed;
 }
 
+function getBoolean(env, key, fallback) {
+  const rawValue = env[key];
+
+  if (rawValue === undefined || rawValue === "") {
+    return fallback;
+  }
+
+  const normalized = String(rawValue).trim().toLowerCase();
+
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  throw new Error(`${key} must be a boolean value.`);
+}
+
 function parseCsvList(rawValue) {
   return (rawValue || "")
     .split(",")
@@ -38,25 +58,81 @@ function parseCsvList(rawValue) {
     .filter(Boolean);
 }
 
+const DEFAULT_SELECTORS = {
+  messageContainers: [
+    '[data-tid*="message"]',
+    '[data-tid*="chat-pane-item"]',
+    '[data-tid*="message-pane-item"]',
+    '[data-tid*="chat-list-item"]',
+    'article',
+    '[role="listitem"]',
+  ],
+  sender: [
+    '[data-tid*="author"]',
+    '[data-tid*="sender"]',
+    '[data-tid*="display-name"]',
+    '[data-tid*="chat-list-item-title"]',
+    '[data-tid*="persona-primary-text"]',
+    '[data-tid*="message-author-name"]',
+    '[data-tid*="threadBodyDisplayName"]',
+    '[aria-label*="sent by"]',
+    '[role="heading"]',
+    'h3',
+    'h4',
+    'strong',
+  ],
+  text: [
+    '[data-tid*="message-body"]',
+    '[data-tid*="message-text"]',
+    '[data-tid*="chat-list-item-preview"]',
+    '[data-tid*="message-preview"]',
+    '[data-tid*="body-content"]',
+    '[data-tid*="rich-text"]',
+    '[dir="auto"]',
+    'p',
+  ],
+  timestamp: [
+    'time',
+    '[data-tid*="timestamp"]',
+    '[data-tid*="message-time"]',
+    '[aria-label*="AM"]',
+    '[aria-label*="PM"]',
+  ],
+};
+
+function getSelectorList(env, key, fallback) {
+  const parsed = parseCsvList(env[key]);
+  return parsed.length > 0 ? parsed : fallback;
+}
+
 export function loadConfig(env = process.env) {
-  const watchedUserIds = parseCsvList(
-    getOptional(env, "WATCHED_TEAMS_USER_IDS") ?? getRequired(env, "WATCHED_USER_IDS"),
+  const watchedSenders = parseCsvList(
+    getOptional(env, "WATCHED_SENDERS") ??
+      getOptional(env, "WATCHED_TEAMS_USER_IDS") ??
+      getRequired(env, "WATCHED_USER_IDS"),
   );
 
-  if (watchedUserIds.length === 0) {
-    throw new Error("WATCHED_TEAMS_USER_IDS must include at least one Microsoft Teams user ID.");
+  if (watchedSenders.length === 0) {
+    throw new Error("WATCHED_SENDERS must include at least one sender name.");
   }
 
   return {
-    server: {
-      port: getInteger(env, "PORT", 3000),
-    },
-    teams: {
-      appId: getOptional(env, "MicrosoftAppId") ?? getRequired(env, "TEAMS_BOT_APP_ID"),
-      appPassword:
-        getOptional(env, "MicrosoftAppPassword") ?? getRequired(env, "TEAMS_BOT_APP_PASSWORD"),
-      appType: getOptional(env, "MicrosoftAppType", "MultiTenant"),
-      appTenantId: getOptional(env, "MicrosoftAppTenantId"),
+    teamsWeb: {
+      url: getOptional(env, "TEAMS_WEB_URL", "https://teams.microsoft.com/v2/"),
+      profileDir: getOptional(env, "BROWSER_PROFILE_DIR", ".teams-browser-profile"),
+      channel: getOptional(env, "BROWSER_CHANNEL"),
+      headless: getBoolean(env, "HEADLESS", false),
+      pollIntervalMs: getInteger(env, "POLL_INTERVAL_SECONDS", 5) * 1000,
+      selectors: {
+        messageContainers: getSelectorList(
+          env,
+          "TEAMS_MESSAGE_CONTAINER_SELECTORS",
+          DEFAULT_SELECTORS.messageContainers,
+        ),
+        sender: getSelectorList(env, "TEAMS_SENDER_SELECTORS", DEFAULT_SELECTORS.sender),
+        text: getSelectorList(env, "TEAMS_TEXT_SELECTORS", DEFAULT_SELECTORS.text),
+        timestamp: getSelectorList(env, "TEAMS_TIMESTAMP_SELECTORS", DEFAULT_SELECTORS.timestamp),
+      },
     },
     twilio: {
       accountSid: getRequired(env, "TWILIO_ACCOUNT_SID"),
@@ -65,9 +141,8 @@ export function loadConfig(env = process.env) {
       toNumber: getRequired(env, "ALERT_TO_NUMBER"),
     },
     alerts: {
-      watchedUserIds,
+      watchedSenders,
       cooldownMs: getInteger(env, "CALL_COOLDOWN_SECONDS", 300) * 1000,
-      simulationSharedSecret: getOptional(env, "SIMULATION_SHARED_SECRET"),
     },
   };
 }

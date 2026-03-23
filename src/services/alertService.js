@@ -1,8 +1,12 @@
-function normalizeSenderId(senderId) {
-  return String(senderId || "").trim();
+function normalizeSenderKey(senderId) {
+  return String(senderId || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
 }
 
 export function createAlertService({
+  watchedSenders,
   watchedUserIds,
   cooldownMs = 0,
   callService,
@@ -13,19 +17,21 @@ export function createAlertService({
     throw new Error("callService.placeAlertCall is required.");
   }
 
-  const watchedSenders = new Set((watchedUserIds || []).map(normalizeSenderId).filter(Boolean));
+  const watchedSenderKeys = new Set(
+    (watchedSenders || watchedUserIds || []).map(normalizeSenderKey).filter(Boolean),
+  );
   const lastAlertBySender = new Map();
 
   return {
     async handleMessage(event) {
-      const senderId = normalizeSenderId(event?.senderId);
+      const senderId = normalizeSenderKey(event?.senderId);
       const text = String(event?.text || "").trim();
 
       if (!senderId) {
         return { triggered: false, reason: "missing_sender_id" };
       }
 
-      if (!watchedSenders.has(senderId)) {
+      if (!watchedSenderKeys.has(senderId)) {
         return { triggered: false, reason: "sender_not_watched" };
       }
 

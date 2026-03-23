@@ -1,18 +1,39 @@
 import { loadConfig } from "./config.js";
 import { createLogger } from "./logger.js";
-import { createTeamsAlertApp } from "./teamsApp.js";
+import { createTeamsWebWatcher } from "./teamsWatcher.js";
 
 const logger = createLogger();
+let teamsWatcher = null;
+
+async function shutdown(signal) {
+  logger.info("Shutting down Teams web watcher.", { signal });
+
+  try {
+    if (teamsWatcher) {
+      await teamsWatcher.close();
+    }
+  } finally {
+    process.exit(0);
+  }
+}
 
 async function bootstrap() {
   const config = loadConfig();
-  const teamsAlertApp = createTeamsAlertApp(config, { logger });
+  teamsWatcher = createTeamsWebWatcher(config, { logger });
 
-  await teamsAlertApp.start();
-  logger.info("Microsoft Teams call alert service started.", {
-    port: config.server.port,
-    watchedUsers: config.alerts.watchedUserIds.length,
+  process.once("SIGINT", () => {
+    void shutdown("SIGINT");
   });
+  process.once("SIGTERM", () => {
+    void shutdown("SIGTERM");
+  });
+
+  logger.info("Microsoft Teams call alert watcher starting.", {
+    watchedSenders: config.alerts.watchedSenders.length,
+    pollIntervalMs: config.teamsWeb.pollIntervalMs,
+  });
+
+  await teamsWatcher.run();
 }
 
 bootstrap().catch((error) => {
