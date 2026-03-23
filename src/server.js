@@ -1,15 +1,15 @@
 import { loadConfig } from "./config.js";
 import { createLogger } from "./logger.js";
-import { createSlackAlertApp } from "./slackApp.js";
+import { createTeamsAlertApp } from "./teamsApp.js";
 
 const logger = createLogger();
 
 async function bootstrap() {
   const config = loadConfig();
-  const slackAlertApp = createSlackAlertApp(config, { logger });
+  const teamsAlertApp = createTeamsAlertApp(config, { logger });
 
-  await slackAlertApp.start();
-  logger.info("Slack call alert service started.", {
+  await teamsAlertApp.start();
+  logger.info("Microsoft Teams call alert service started.", {
     port: config.server.port,
     watchedUsers: config.alerts.watchedUserIds.length,
   });

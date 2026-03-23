@@ -39,19 +39,24 @@ function parseCsvList(rawValue) {
 }
 
 export function loadConfig(env = process.env) {
-  const watchedUserIds = parseCsvList(getRequired(env, "WATCHED_USER_IDS"));
+  const watchedUserIds = parseCsvList(
+    getOptional(env, "WATCHED_TEAMS_USER_IDS") ?? getRequired(env, "WATCHED_USER_IDS"),
+  );
 
   if (watchedUserIds.length === 0) {
-    throw new Error("WATCHED_USER_IDS must include at least one Slack user ID.");
+    throw new Error("WATCHED_TEAMS_USER_IDS must include at least one Microsoft Teams user ID.");
   }
 
   return {
     server: {
       port: getInteger(env, "PORT", 3000),
     },
-    slack: {
-      signingSecret: getRequired(env, "SLACK_SIGNING_SECRET"),
-      botToken: getRequired(env, "SLACK_BOT_TOKEN"),
+    teams: {
+      appId: getOptional(env, "MicrosoftAppId") ?? getRequired(env, "TEAMS_BOT_APP_ID"),
+      appPassword:
+        getOptional(env, "MicrosoftAppPassword") ?? getRequired(env, "TEAMS_BOT_APP_PASSWORD"),
+      appType: getOptional(env, "MicrosoftAppType", "MultiTenant"),
+      appTenantId: getOptional(env, "MicrosoftAppTenantId"),
     },
     twilio: {
       accountSid: getRequired(env, "TWILIO_ACCOUNT_SID"),

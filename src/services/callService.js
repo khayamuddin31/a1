@@ -20,7 +20,7 @@ export function buildVoiceMessage(event) {
   const senderName = event.senderName || event.senderId || "A watched sender";
   const preview = truncateText(sanitizeText(event.text) || "No message body was provided.", 180);
 
-  return `Alert. ${senderName} sent a new team message. Message preview: ${preview}. Please check Slack now.`;
+  return `Alert. ${senderName} sent a new Microsoft Teams message. Message preview: ${preview}. Please check Microsoft Teams now.`;
 }
 
 export function createCallService({

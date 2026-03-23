@@ -11,7 +11,7 @@ test("buildVoiceMessage includes sender and a message preview", () => {
 
   assert.match(message, /Alice/);
   assert.match(message, /Deployment failed/);
-  assert.match(message, /check Slack now/i);
+  assert.match(message, /check Microsoft Teams now/i);
 });
 
 test("placeAlertCall sends a TwiML call request through Twilio", async () => {

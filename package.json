@@ -1,7 +1,7 @@
 {
   "name": "team-message-call-alerts",
   "version": "1.0.0",
-  "description": "Slack message watcher that places phone call alerts for selected senders",
+  "description": "Microsoft Teams message watcher that places phone call alerts for selected senders",
   "type": "module",
   "main": "src/server.js",
   "scripts": {
@@ -14,7 +14,8 @@
     "url": "git+https://github.com/khayamuddin31/a1.git"
   },
   "keywords": [
-    "slack",
+    "microsoft-teams",
+    "botframework",
     "twilio",
     "alerts",
     "voice"
@@ -29,7 +30,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@slack/bolt": "^4.6.0",
+    "botbuilder": "^4.23.3",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "twilio": "^5.13.0"
