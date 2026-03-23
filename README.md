@@ -75,6 +75,14 @@ ALERT_TO_NUMBER=+15557654321
 CALL_COOLDOWN_SECONDS=300
 ```
 
+If you are upgrading from an older copy of the project, make sure you use:
+
+```env
+WATCHED_SENDERS=Alice Smith,Bob Jones
+```
+
+and not the older Teams bot variables such as `WATCHED_USER_IDS`.
+
 ## Important environment variables
 
 - `WATCHED_SENDERS`: comma-separated display names to watch, matched case-insensitively

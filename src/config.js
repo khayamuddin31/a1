@@ -58,6 +58,18 @@ function parseCsvList(rawValue) {
     .filter(Boolean);
 }
 
+function getFirstPresent(env, keys) {
+  for (const key of keys) {
+    const value = env[key]?.trim();
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 const DEFAULT_SELECTORS = {
   messageContainers: [
     '[data-tid*="message"]',
@@ -107,13 +119,13 @@ function getSelectorList(env, key, fallback) {
 
 export function loadConfig(env = process.env) {
   const watchedSenders = parseCsvList(
-    getOptional(env, "WATCHED_SENDERS") ??
-      getOptional(env, "WATCHED_TEAMS_USER_IDS") ??
-      getRequired(env, "WATCHED_USER_IDS"),
+    getFirstPresent(env, ["WATCHED_SENDERS", "WATCHED_TEAMS_USER_IDS", "WATCHED_USER_IDS"]),
   );
 
   if (watchedSenders.length === 0) {
-    throw new Error("WATCHED_SENDERS must include at least one sender name.");
+    throw new Error(
+      "Missing required environment variable: WATCHED_SENDERS (legacy aliases WATCHED_TEAMS_USER_IDS and WATCHED_USER_IDS are also accepted).",
+    );
   }
 
   return {
