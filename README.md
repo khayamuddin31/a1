@@ -51,6 +51,8 @@ npm install
 cp .env.example .env
 ```
 
+The `.env` file must live in the project root, in the same folder as `package.json`.
+
 If you want Playwright's bundled browser, install it once:
 
 ```bash

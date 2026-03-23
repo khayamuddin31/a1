@@ -1,4 +1,13 @@
-import "dotenv/config";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { config as loadDotenv } from "dotenv";
+
+const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(moduleDirectory, "..");
+
+loadDotenv({ path: path.join(projectRoot, ".env") });
+loadDotenv({ path: path.join(projectRoot, ".env.local"), override: true });
 
 function getRequired(env, key) {
   const value = env[key]?.trim();
